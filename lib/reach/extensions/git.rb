@@ -27,15 +27,17 @@ module Reach
       def deploy
         requires_setting :deploy_to
 
-        head = local_head
+        _current_head = current_head
+        _origin_head  = origin_head
 
         within fetch(:deploy_to) do
           execute :git, 'fetch'
         end
 
-        _origin_head = origin_head
+        puts _current_head
+        puts _origin_head
 
-        if head == _origin_head
+        if _current_head == _origin_head
           comment "#{_origin_head} has already been deployed", :yellow
 
           false
@@ -63,11 +65,16 @@ module Reach
         else
           within fetch(:deploy_to) do
             execute :git, 'tag', '-d', _current_tag
-            # current is now previous
-            execute :git, 'reset', '--hard', current_tag
           end
 
-          comment "HEAD is now at #{git_head}"
+          # current is now previous
+          _current_tag = current_tag
+
+          within fetch(:deploy_to) do
+            execute :git, 'reset', '--hard', _current_tag
+          end
+
+          comment "HEAD is now at #{current_head}"
 
           true
         end
@@ -112,7 +119,7 @@ module Reach
         end
       end
 
-      def local_head
+      def current_head
         within fetch(:deploy_to) do
           capture(:git, 'rev-parse', '--short', 'HEAD').strip
         end
@@ -120,7 +127,7 @@ module Reach
 
       def origin_head
         within fetch(:deploy_to) do
-          capture(:git, 'ls-remote', 'origin', '-h', "\"refs/heads/#{fetch(:branch, :master)}\"").strip[0..6]
+          capture(:git, 'ls-remote', 'origin', '-h', "\"refs/heads/#{fetch(:branch, :master)}\"").strip[0..7]
         end
       end
 
